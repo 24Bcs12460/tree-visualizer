@@ -52,5 +52,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: compiled-class-files
-          path: ./*.class
+          path: ./**/*.class
           if-no-files-found: error
