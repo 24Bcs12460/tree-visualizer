@@ -1,0 +1,56 @@
+name: Build and Test Java Project
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 11
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "11"
+
+      - name: Compile all Java files
+        run: javac *.java
+
+      - name: Verify compilation output
+        run: |
+          class_count=$(find . -maxdepth 1 -name "*.class" | wc -l)
+          echo "Compiled class files: ${class_count}"
+          if [ ! -f "BSTVisualizer.class" ]; then
+            echo "Compilation failed: BSTVisualizer.class was not generated"
+            exit 1
+          fi
+
+      - name: Run app briefly (smoke check)
+        run: |
+          set +e
+          xvfb-run -a timeout 5s java BSTVisualizer
+          status=$?
+          set -e
+          # timeout returns 124; timeout terminates the child process with SIGTERM (143).
+          if [ "$status" -ne 0 ] && [ "$status" -ne 124 ] && [ "$status" -ne 143 ]; then
+            echo "Application run failed with status $status"
+            exit "$status"
+          fi
+          echo "Application launched successfully (timeout is expected for GUI apps)."
+
+      - name: Upload compiled classes
+        uses: actions/upload-artifact@v4
+        with:
+          name: compiled-class-files
+          path: ./*.class
+          if-no-files-found: error
